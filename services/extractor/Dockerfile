@@ -11,5 +11,6 @@
 # limitations under the License.
 
 FROM decoder/base-cuda
-COPY extract_frames.py /app/
+# Copy the frame extraction script from the build context.
+COPY services/extractor/extract_frames.py /app/extract_frames.py
 ENTRYPOINT ["python3", "/app/extract_frames.py"]

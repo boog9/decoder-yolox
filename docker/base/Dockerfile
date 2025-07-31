@@ -10,13 +10,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04
+FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
         python3.10 python3.10-venv python3-pip git ffmpeg libsm6 libxext6 \
     && rm -rf /var/lib/apt/lists/*
 RUN python3 -m pip install --upgrade pip wheel setuptools
 # Torch + базові наукові пакети
-RUN pip install torch==2.3.0+cu122 torchvision==0.18.0+cu122 --index-url https://download.pytorch.org/whl/cu122
+RUN pip install torch==2.2.2+cu121 torchvision==0.17.2+cu121 --index-url https://download.pytorch.org/whl/cu121
 RUN pip install opencv-python-headless==4.* numpy scipy tqdm typer==0.9
 CMD ["bash"]

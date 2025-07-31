@@ -5,9 +5,9 @@ This repository contains Docker build files for the video-processing pipeline de
 ## Docker Images
 
 ### `decoder/base-cuda`
-- **Purpose:** Provides CUDA 12.2 runtime along with Python 3.10 and basic scientific libraries for GPU-accelerated video processing.
+- **Purpose:** Provides CUDA 12.1 runtime along with Python 3.10 and basic scientific libraries for GPU-accelerated video processing.
 - **GPU required:** Yes. Enable with `--gpus all` when running.
-- **Packages:** Python 3.10 with PyTorch 2.3.0 + CUDA 12.2, torchvision 0.18.0, OpenCV, NumPy, SciPy, tqdm and typer.
+- **Packages:** Python 3.10 with PyTorch 2.2.2 + CUDA 12.1, torchvision 0.17.2, OpenCV, NumPy, SciPy, tqdm and typer.
 
 #### Build example
 ```bash

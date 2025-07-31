@@ -19,10 +19,19 @@ RUN pip install --no-cache-dir gdown && rm -rf /root/.cache/pip
 
 RUN git clone --depth 1 https://github.com/boog9/TennisCourtDetector /tmp/TennisCourtDetector
 
-# TennisCourtDetector repo might not include a full Python package.
-# Manually create a package and copy the detector file.
+# TennisCourtDetector repository ships all code in the root directory.
+# Package it under /app/tennis_court_detector so it can be imported.
 RUN mkdir -p /app/tennis_court_detector && \
-    cp /tmp/TennisCourtDetector/detector.py /app/tennis_court_detector/__init__.py
+    cp /tmp/TennisCourtDetector/tracknet.py /app/tennis_court_detector/ && \
+    cp /tmp/TennisCourtDetector/postprocess.py /app/tennis_court_detector/ && \
+    cp /tmp/TennisCourtDetector/court_reference.py /app/tennis_court_detector/ && \
+    cp /tmp/TennisCourtDetector/homography.py /app/tennis_court_detector/ && \
+    cp /tmp/TennisCourtDetector/infer_in_image.py /app/tennis_court_detector/ && \
+    cp /tmp/TennisCourtDetector/infer_in_video.py /app/tennis_court_detector/ && \
+    cp /tmp/TennisCourtDetector/utils.py /app/tennis_court_detector/ && \
+    cp /tmp/TennisCourtDetector/base_trainer.py /app/tennis_court_detector/ && \
+    cp /tmp/TennisCourtDetector/base_validator.py /app/tennis_court_detector/ && \
+    printf 'from .tracknet import CourtDetector\n' > /app/tennis_court_detector/__init__.py
 
 # Download pretrained weights.
 RUN mkdir -p /opt/weights \

@@ -14,11 +14,12 @@ FROM decoder/base-cuda
 
 ARG WEIGHTS_URL="https://drive.google.com/uc?id=1f-Co64ehgq4uddcQm1aFBDtbnyZhQvgG"
 
-# Install TennisCourtDetector from GitHub at a fixed commit.
-RUN pip install --no-cache-dir \
-    git+https://github.com/yastrebksv/TennisCourtDetector@e5cd4f1 \
-    gdown \
-    && rm -rf /root/.cache/pip
+# Install gdown and clone TennisCourtDetector (no setup.py available)
+RUN pip install --no-cache-dir gdown && rm -rf /root/.cache/pip
+
+RUN git clone --depth 1 https://github.com/yastrebksv/TennisCourtDetector /tmp/TennisCourtDetector
+
+COPY /tmp/TennisCourtDetector/tennis_court_detector /app/tennis_court_detector
 
 # Download pretrained weights.
 RUN mkdir -p /opt/weights \
@@ -28,6 +29,7 @@ RUN mkdir -p /opt/weights \
     || (echo "Weights file not usable as PyTorch model." && exit 1)
 
 ENV TCD_WEIGHTS=/opt/weights/model.pt
+ENV PYTHONPATH="/app:$PYTHONPATH"
 
 COPY services/court_detector/calibrate.py /app/calibrate.py
 

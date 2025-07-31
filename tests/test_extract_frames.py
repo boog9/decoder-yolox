@@ -16,7 +16,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-import cv2
+import pytest
+
+cv2 = pytest.importorskip("cv2")
 import numpy as np
 
 from services.extractor.extract_frames import extract_frames

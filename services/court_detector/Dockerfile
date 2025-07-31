@@ -19,7 +19,7 @@ RUN pip install --no-cache-dir gdown && rm -rf /root/.cache/pip
 
 RUN git clone --depth 1 https://github.com/yastrebksv/TennisCourtDetector /tmp/TennisCourtDetector
 
-COPY /tmp/TennisCourtDetector/tennis_court_detector /app/tennis_court_detector
+RUN cp -r /tmp/TennisCourtDetector/tennis_court_detector /app/
 
 # Download pretrained weights.
 RUN mkdir -p /opt/weights \
@@ -29,7 +29,7 @@ RUN mkdir -p /opt/weights \
     || (echo "Weights file not usable as PyTorch model." && exit 1)
 
 ENV TCD_WEIGHTS=/opt/weights/model.pt
-ENV PYTHONPATH="/app:$PYTHONPATH"
+ENV PYTHONPATH=/app
 
 COPY services/court_detector/calibrate.py /app/calibrate.py
 

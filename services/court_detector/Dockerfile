@@ -17,7 +17,7 @@ ARG WEIGHTS_URL="https://drive.google.com/uc?id=1f-Co64ehgq4uddcQm1aFBDtbnyZhQvg
 # Install gdown and clone TennisCourtDetector (no setup.py available)
 RUN pip install --no-cache-dir gdown && rm -rf /root/.cache/pip
 
-RUN git clone --depth 1 https://github.com/yastrebksv/TennisCourtDetector /tmp/TennisCourtDetector
+RUN git clone --depth 1 https://github.com/boog9/TennisCourtDetector /tmp/TennisCourtDetector
 
 RUN cp -r /tmp/TennisCourtDetector/tennis_court_detector /app/
 

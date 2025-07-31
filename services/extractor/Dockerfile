@@ -10,12 +10,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.PHONY: base-cuda
-
-base-cuda:
-	docker build -t decoder/base-cuda -f docker/base/Dockerfile .
-
-.PHONY: extractor
-
-extractor:
-docker build -t decoder/extractor -f services/extractor/Dockerfile .
+FROM decoder/base-cuda
+COPY extract_frames.py /app/
+ENTRYPOINT ["python3", "/app/extract_frames.py"]

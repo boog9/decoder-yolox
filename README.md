@@ -25,3 +25,29 @@ docker run --gpus all -it decoder/base-cuda bash
 
 #### Parameters
 This base image exposes no additional parameters. It is intended as a foundation for other services in the pipeline.
+
+### `decoder/extractor`
+- **Purpose:** Extracts PNG frames from a video file.
+- **GPU required:** No.
+
+#### Build example
+```bash
+make extractor
+# or
+docker build -t decoder/extractor -f services/extractor/Dockerfile .
+```
+
+#### Run example
+```bash
+docker run --rm -v $(pwd)/data:/data decoder/extractor \
+    --video /data/match.mp4 --out /data/frames --fps 30
+```
+
+#### Dependencies / volumes
+- Mount a working directory with `-v $(pwd)/data:/data` to supply video
+  files and collect frames.
+
+#### Parameters
+- `--video` (required) – path to the source video.
+- `--out` (required) – directory where frames will be saved.
+- `--fps` (default: `30`) – output frame rate.

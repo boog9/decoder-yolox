@@ -18,4 +18,4 @@ base-cuda:
 .PHONY: extractor
 
 extractor:
-docker build -t decoder/extractor -f services/extractor/Dockerfile .
+	docker build -t decoder/extractor -f services/extractor/Dockerfile .

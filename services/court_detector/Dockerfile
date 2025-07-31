@@ -16,7 +16,7 @@ ARG WEIGHTS_URL="https://drive.google.com/uc?id=1f-Co64ehgq4uddcQm1aFBDtbnyZhQvg
 
 # Install TennisCourtDetector from GitHub at a fixed commit.
 RUN pip install --no-cache-dir \
-    git+https://github.com/yastrebksv/TennisCourtDetector@e2d35bf \
+    git+https://github.com/yastrebksv/TennisCourtDetector@e5cd4f1 \
     gdown \
     && rm -rf /root/.cache/pip
 

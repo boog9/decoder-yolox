@@ -17,6 +17,6 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 RUN python3 -m pip install --upgrade pip wheel setuptools
 # Torch + базові наукові пакети
-RUN pip install torch==2.3.*+cu122 torchvision==0.18.*+cu122 --index-url https://download.pytorch.org/whl/cu122
+RUN pip install torch==2.3.0+cu122 torchvision==0.18.0+cu122 --index-url https://download.pytorch.org/whl/cu122
 RUN pip install opencv-python-headless==4.* numpy scipy tqdm typer==0.9
 CMD ["bash"]

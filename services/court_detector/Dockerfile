@@ -19,7 +19,10 @@ RUN pip install --no-cache-dir gdown && rm -rf /root/.cache/pip
 
 RUN git clone --depth 1 https://github.com/boog9/TennisCourtDetector /tmp/TennisCourtDetector
 
-RUN cp -r /tmp/TennisCourtDetector/tennis_court_detector /app/
+# TennisCourtDetector repo might not include a full Python package.
+# Manually create a package and copy the detector file.
+RUN mkdir -p /app/tennis_court_detector && \
+    cp /tmp/TennisCourtDetector/detector.py /app/tennis_court_detector/__init__.py
 
 # Download pretrained weights.
 RUN mkdir -p /opt/weights \

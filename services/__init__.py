@@ -9,19 +9,4 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-.PHONY: base-cuda
-
-base-cuda:
-	docker build -t decoder/base-cuda -f docker/base/Dockerfile .
-
-.PHONY: extractor
-
-extractor:
-	docker build -t decoder/extractor -f services/extractor/Dockerfile .
-
-
-.PHONY: court-detector
-
-court-detector:
-	docker build -t decoder/court-detector -f services/court_detector/Dockerfile .
+"""Service modules."""

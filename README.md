@@ -52,3 +52,38 @@ docker run --rm -v $(pwd)/data:/data decoder/extractor \
 - `--video` (required) – path to the source video.
 - `--out` (required) – directory where frames will be saved.
 - `--fps` (default: `30`) – output frame rate.
+
+### `decoder/court-detector`
+- **Purpose:** Detects tennis court lines on a frame and writes calibration metadata.
+- **GPU required:** Yes. Use `--gpus all` when running; the tool falls back to CPU if unavailable.
+
+#### Build example
+```bash
+make court-detector
+# or
+docker build -t decoder/court-detector -f services/court_detector/Dockerfile .
+```
+
+Weights are downloaded automatically during the build phase.
+Model format: PyTorch `.pt` file (validated at build-time).
+
+#### Run example
+```bash
+docker run --gpus all --rm -v $(pwd)/data:/data decoder/court-detector \
+    --frame /data/frames/000000.png --out /data/court_meta.json
+```
+```bash
+docker run --rm -v $(pwd)/data:/data decoder/court-detector \
+    --frame /data/frames/000000.png --out /data/court_meta.json --device cpu
+```
+
+#### Dependencies / volumes
+- Mount a working directory with `-v $(pwd)/data:/data` for input and output files.
+
+#### Parameters
+- `--frame` (required) – path to the frame image.
+- `--out` (required) – destination JSON file containing court metadata.
+- `--weights` (optional) – path to the model weights; defaults to `TCD_WEIGHTS`.
+- `--device` (optional) – `auto`, `cpu`, or `cuda`; defaults to `auto`.
+
+The output JSON additionally contains `frame_id`, `timestamp_ms`, `model_sha`, and `device`.

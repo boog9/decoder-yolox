@@ -43,6 +43,9 @@ RUN mkdir -p /app/tennis_court_detector && \
 # Patch imports in postprocess.py to use package-relative utils module
 RUN sed -i 's/^from utils /from .utils /' /app/tennis_court_detector/postprocess.py
 
+# Patch imports in homography.py to use package-relative court_reference module
+RUN sed -i 's/^from court_reference /from .court_reference /' /app/tennis_court_detector/homography.py
+
 # Download pretrained weights.
 RUN mkdir -p /opt/weights \
     && gdown "$WEIGHTS_URL" -O /opt/weights/model.pt \

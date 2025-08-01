@@ -21,7 +21,6 @@ RUN git clone --depth 1 https://github.com/boog9/TennisCourtDetector /tmp/Tennis
 
 # TennisCourtDetector repository ships all code in the root directory.
 # Package it under /app/tennis_court_detector so it can be imported.
-COPY services/court_detector/infer_in_image_patch.py /tmp/infer_patch.py
 
 RUN mkdir -p /app/tennis_court_detector && \
     cp /tmp/TennisCourtDetector/tracknet.py /app/tennis_court_detector/ && \
@@ -29,7 +28,6 @@ RUN mkdir -p /app/tennis_court_detector && \
     cp /tmp/TennisCourtDetector/court_reference.py /app/tennis_court_detector/ && \
     cp /tmp/TennisCourtDetector/homography.py /app/tennis_court_detector/ && \
     cp /tmp/TennisCourtDetector/infer_in_image.py /app/tennis_court_detector/ && \
-    cat /tmp/infer_patch.py >> /app/tennis_court_detector/infer_in_image.py && \
     sed -i '1s;^;from __future__ import annotations\n;' /app/tennis_court_detector/infer_in_image.py && \
     sed -i \
         -e 's/^from tracknet /from .tracknet /' \

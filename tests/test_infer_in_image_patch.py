@@ -16,7 +16,7 @@ import pytest
 cv2 = pytest.importorskip("cv2")
 np = pytest.importorskip("numpy")
 
-from services.court_detector.infer_in_image_patch import extract_bounding_boxes
+from services.court_detector.infer_in_image import extract_bounding_boxes
 
 
 def test_extract_bounding_boxes_simple() -> None:

@@ -40,15 +40,47 @@ class BallTrackerNet(nn.Module):
 
     def __init__(self) -> None:
         super().__init__()
+
+        # The original model defines each block explicitly so that the
+        # state_dict keys match the upstream checkpoint exactly.
         self.conv1 = ConvBlock(3, 64)
-        for i in range(2, 18):
-            setattr(self, f"conv{i}", ConvBlock(64, 64))
+        self.conv2 = ConvBlock(64, 64)
+        self.conv3 = ConvBlock(64, 64)
+        self.conv4 = ConvBlock(64, 64)
+        self.conv5 = ConvBlock(64, 64)
+        self.conv6 = ConvBlock(64, 64)
+        self.conv7 = ConvBlock(64, 64)
+        self.conv8 = ConvBlock(64, 64)
+        self.conv9 = ConvBlock(64, 64)
+        self.conv10 = ConvBlock(64, 64)
+        self.conv11 = ConvBlock(64, 64)
+        self.conv12 = ConvBlock(64, 64)
+        self.conv13 = ConvBlock(64, 64)
+        self.conv14 = ConvBlock(64, 64)
+        self.conv15 = ConvBlock(64, 64)
+        self.conv16 = ConvBlock(64, 64)
+        self.conv17 = ConvBlock(64, 64)
         self.conv18 = ConvBlock(64, 15)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:  # pragma: no cover
-        for i in range(1, 19):
-            conv = getattr(self, f"conv{i}")
-            x = conv(x)
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.conv4(x)
+        x = self.conv5(x)
+        x = self.conv6(x)
+        x = self.conv7(x)
+        x = self.conv8(x)
+        x = self.conv9(x)
+        x = self.conv10(x)
+        x = self.conv11(x)
+        x = self.conv12(x)
+        x = self.conv13(x)
+        x = self.conv14(x)
+        x = self.conv15(x)
+        x = self.conv16(x)
+        x = self.conv17(x)
+        x = self.conv18(x)
         return x
 
 

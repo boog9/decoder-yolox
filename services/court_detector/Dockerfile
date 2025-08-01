@@ -14,8 +14,8 @@ FROM decoder/base-cuda
 
 ARG WEIGHTS_URL="https://drive.google.com/uc?id=1f-Co64ehgq4uddcQm1aFBDtbnyZhQvgG"
 
-# Install gdown and pin NumPy below 2 for PyTorch compatibility
-RUN pip install --no-cache-dir 'numpy<2' gdown && rm -rf /root/.cache/pip
+# Install gdown, matplotlib and pin NumPy below 2 for PyTorch compatibility
+RUN pip install --no-cache-dir 'numpy<2' gdown matplotlib && rm -rf /root/.cache/pip
 
 RUN git clone --depth 1 https://github.com/boog9/TennisCourtDetector /tmp/TennisCourtDetector
 

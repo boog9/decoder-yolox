@@ -9,7 +9,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Patch for TennisCourtDetector with bbox extraction utilities."""
+"""Court detection utilities for a single image."""
+
+from __future__ import annotations
 
 from typing import Dict, List
 
@@ -21,7 +23,7 @@ import torch
 def extract_bounding_boxes(
     output: torch.Tensor | np.ndarray, threshold: float = 0.5
 ) -> List[List[int]]:
-    """Extract bounding boxes from model output.
+    """Extract bounding boxes from a heatmap output.
 
     Args:
         output: Raw output tensor from ``BallTrackerNet``.

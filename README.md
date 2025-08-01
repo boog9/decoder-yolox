@@ -71,6 +71,9 @@ The upstream repository is reorganized at build time so that
 `__init__.py` created during the build exports `CourtDetector` from
 `infer_in_image` since the original `tracknet` module does not define
 the class.
+Import statements in `infer_in_image.py` are also patched to use package-
+relative imports (e.g. `from .tracknet import BallTrackerNet`) to avoid
+`ModuleNotFoundError` at runtime.
 NumPy is pinned below version 2 for runtime compatibility with PyTorch.
 
 #### Run example

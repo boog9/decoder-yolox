@@ -27,6 +27,13 @@ RUN mkdir -p /app/tennis_court_detector && \
     cp /tmp/TennisCourtDetector/court_reference.py /app/tennis_court_detector/ && \
     cp /tmp/TennisCourtDetector/homography.py /app/tennis_court_detector/ && \
     cp /tmp/TennisCourtDetector/infer_in_image.py /app/tennis_court_detector/ && \
+    sed -i \
+        -e 's/^from tracknet /from .tracknet /' \
+        -e 's/^from postprocess /from .postprocess /' \
+        -e 's/^from court_reference /from .court_reference /' \
+        -e 's/^from homography /from .homography /' \
+        -e 's/^from utils /from .utils /' \
+        /app/tennis_court_detector/infer_in_image.py && \
     cp /tmp/TennisCourtDetector/infer_in_video.py /app/tennis_court_detector/ && \
     cp /tmp/TennisCourtDetector/utils.py /app/tennis_court_detector/ && \
     cp /tmp/TennisCourtDetector/base_trainer.py /app/tennis_court_detector/ && \

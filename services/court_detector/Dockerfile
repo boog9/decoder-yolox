@@ -26,4 +26,4 @@ RUN mkdir -p /opt/weights \
 
 COPY services/court_detector/calibrate.py /app/calibrate.py
 
-ENTRYPOINT ["python", "/app/calibrate.py"]
+ENTRYPOINT ["python3", "/app/calibrate.py"]

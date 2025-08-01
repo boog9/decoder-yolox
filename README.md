@@ -69,7 +69,9 @@ and stored in `/opt/weights/model.pt` inside the image. All detector sources are
 packaged under `tennis_court_detector` in the container. Import statements are
 patched for package-relative imports so that `calibrate.py` can simply import
 `CourtDetector`. NumPy is pinned below version 2, and the image includes
-matplotlib and OpenCV for optional homography utilities.
+matplotlib and OpenCV for optional homography utilities. The exact weights are
+retrieved from Google Drive file ID `1f-Co64ehgq4uddcQm1aFBDtbnyZhQvgG` to
+ensure reproducibility.
 
 #### Run example
 ```bash

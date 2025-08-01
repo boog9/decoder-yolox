@@ -55,14 +55,31 @@ def calibrate(frame: str, out: str, weights: str, device: str = "auto") -> dict:
         if "cuda" in str(e).lower():
             raise RuntimeError("CUDA requested but not available") from e
         raise
+
+    heatmaps = detector.detect(image)
     meta = {
         "frame_id": Path(frame).name,
         "timestamp_ms": int(time.time() * 1000),
         "model_sha": hashlib.sha256(Path(weights).read_bytes()).hexdigest()[:8]
         if Path(weights).stat().st_size > 0 else "unknown",
         "device": device,
-        **detector.detect(image),  # type: ignore[attr-defined]
+        "heatmaps": heatmaps.tolist(),
     }
+
+    try:
+        from tennis_court_detector.postprocess import refine_kps, compute_homography
+    except Exception:  # pragma: no cover - postprocess optional
+        refine_kps = None
+        compute_homography = None
+
+    if refine_kps and compute_homography:
+        try:
+            kps = refine_kps(heatmaps)
+            H = compute_homography(kps)
+            if H is not None:
+                meta["homography"] = [[float(x) for x in row] for row in H.tolist()]
+        except Exception:  # pragma: no cover - homography is optional
+            pass
 
     Path(out).parent.mkdir(parents=True, exist_ok=True)
     with open(out, "w", encoding="utf-8") as f:

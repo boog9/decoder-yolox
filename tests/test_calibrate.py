@@ -31,7 +31,7 @@ class DummyDetector:
     """Mock CourtDetector used during tests."""
 
     def detect(self, image):  # type: ignore[no-untyped-def]
-        return {"H": [[1, 0, 0], [0, 1, 0], [0, 0, 1]], "points": [(0, 0), (1, 1)]}
+        return np.zeros((15, 2, 2), dtype=np.float32)
 
 
 @pytest.fixture(autouse=True)
@@ -56,8 +56,8 @@ def test_calibrate(tmp_path: Path) -> None:
     assert out.exists()
     data = json.loads(out.read_text())
     assert data == meta
-    assert data["H"][0] == [1, 0, 0]
-    assert data["points"][0] == [0, 0]
+    assert isinstance(data["heatmaps"], list)
+    assert len(data["heatmaps"]) == 15
     assert "frame_id" in data
     assert "timestamp_ms" in data
     assert "model_sha" in data

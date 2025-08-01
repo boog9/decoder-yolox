@@ -70,7 +70,9 @@ The upstream repository is reorganized at build time so that
 `tennis_court_detector` is available as a regular Python package. The build
 adds a small `CourtDetector` implementation directly into
 `infer_in_image.py` so that it can be imported by `calibrate.py`.
-`__init__.py` simply re-exports this class for convenience.
+`__init__.py` simply re-exports this class for convenience. The wrapper
+exposes ``detect(frame: np.ndarray)`` which returns the model's 15-channel
+heatmaps as a NumPy array.
 Import statements in `infer_in_image.py` are also patched to use package-
 relative imports (e.g. `from .tracknet import BallTrackerNet`) to avoid
 `ModuleNotFoundError` at runtime.
@@ -98,4 +100,7 @@ docker run --rm -v $(pwd)/data:/data decoder/court-detector \
 - `--weights` (optional) – path to the model weights; defaults to `TCD_WEIGHTS`.
 - `--device` (optional) – `auto`, `cpu`, or `cuda`; defaults to `auto`.
 
-The output JSON additionally contains `frame_id`, `timestamp_ms`, `model_sha`, and `device`.
+The output JSON additionally contains `frame_id`, `timestamp_ms`, `model_sha`, and
+`device`, plus a `heatmaps` array with 15 channels. If the optional
+`postprocess.py` utilities are available, a `homography` matrix is also
+included.

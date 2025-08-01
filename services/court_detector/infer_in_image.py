@@ -49,38 +49,41 @@ def extract_bounding_boxes(
 
 
 class CourtDetector:
-    """Wrapper around ``BallTrackerNet`` providing detection results."""
+    """Lightweight wrapper for ``BallTrackerNet``."""
 
     def __init__(self, weights_path: str, device: str = "auto") -> None:
         from .tracknet import BallTrackerNet
 
-        self.device = torch.device(
-            "cuda" if device == "cuda" and torch.cuda.is_available() else "cpu"
-        )
+        if device == "auto":
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+        if device == "cuda" and not torch.cuda.is_available():
+            raise RuntimeError("CUDA requested but not available")
+
+        self.device = torch.device(device)
         self.model = BallTrackerNet()
-        self.model.load_state_dict(torch.load(weights_path, map_location=self.device))
+        state = torch.load(weights_path, map_location=self.device)
+        self.model.load_state_dict(state)
         self.model.to(self.device)
         self.model.eval()
 
-    def predict(self, frame_path: str) -> List[Dict[str, object]]:
-        """Run detection on a frame and return ByteTrack-compatible results."""
-        import torchvision.transforms as transforms
-        from PIL import Image
+    def detect(self, frame: np.ndarray) -> np.ndarray:
+        """Return raw heatmaps for a BGR image.
 
-        img = Image.open(frame_path).convert("RGB")
-        tensor = transforms.ToTensor()(img).unsqueeze(0).to(self.device)
+        Args:
+            frame: Image in BGR format as a NumPy array.
+
+        Returns:
+            Array of shape ``(15, H, W)`` containing heatmaps.
+        """
+        from PIL import Image
+        from torchvision.transforms import ToTensor
+
+        img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        tensor = ToTensor()(img).unsqueeze(0).to(self.device)
         with torch.no_grad():
             output = self.model(tensor)
 
-        heatmap = output[0, 0].detach().cpu().numpy()
-        boxes = extract_bounding_boxes(output, threshold=0.5)
-
-        results: List[Dict[str, object]] = []
-        for x1, y1, x2, y2 in boxes:
-            region = heatmap[y1:y2, x1:x2]
-            score = float(region.max()) if region.size else 0.0
-            results.append({"class": 100, "score": score, "bbox": [x1, y1, x2, y2]})
-        return results
+        return output.squeeze(0).detach().cpu().numpy()
 
 
 __all__ = ["extract_bounding_boxes", "CourtDetector"]

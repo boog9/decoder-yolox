@@ -9,4 +9,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Court detector service."""
+"""Court detector service utilities."""
+
+from .infer_in_image import CourtDetector
+
+__all__ = ["CourtDetector"]

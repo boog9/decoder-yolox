@@ -67,7 +67,11 @@ docker build -t decoder/court-detector -f services/court_detector/Dockerfile .
 Weights are downloaded automatically during the build phase.
 Model format: PyTorch `.pt` file (validated at build-time with `map_location="cpu"`).
 The upstream repository is reorganized at build time so that
-`tennis_court_detector` is available as a regular Python package.
+`tennis_court_detector` is available as a regular Python package. The
+`__init__.py` created during the build exports `CourtDetector` from
+`infer_in_image` since the original `tracknet` module does not define
+the class.
+NumPy is pinned below version 2 for runtime compatibility with PyTorch.
 
 #### Run example
 ```bash

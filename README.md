@@ -67,10 +67,11 @@ docker build -t decoder/court-detector -f services/court_detector/Dockerfile .
 Weights are downloaded automatically during the build phase.
 Model format: PyTorch `.pt` file (validated at build-time with `map_location="cpu"`).
 The upstream repository is reorganized at build time so that
-`tennis_court_detector` is available as a regular Python package. The build
-adds a small `CourtDetector` implementation directly into
-`infer_in_image.py` so that it can be imported by `calibrate.py`.
-`__init__.py` simply re-exports this class for convenience. The wrapper
+`tennis_court_detector` is available as a regular Python package. After
+copying the upstream sources, the Dockerfile overwrites `infer_in_image.py`
+with the patched version from this repository so that `calibrate.py` can
+import `CourtDetector` without issues. `__init__.py` simply re-exports this
+class for convenience. The wrapper
 exposes ``detect(frame: np.ndarray)`` which returns the model's 15-channel
 heatmaps as a NumPy array.
 Import statements in `infer_in_image.py` are also patched to use package-

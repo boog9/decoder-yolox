@@ -42,6 +42,10 @@ RUN mkdir -p /app/tennis_court_detector && \
     cp /tmp/TennisCourtDetector/base_validator.py /app/tennis_court_detector/ && \
     printf 'from .infer_in_image import CourtDetector\n' > /app/tennis_court_detector/__init__.py
 
+# Overwrite with the patched infer_in_image implementation so calibrate.py
+# can import CourtDetector without errors.
+COPY services/court_detector/infer_in_image.py /app/tennis_court_detector/infer_in_image.py
+
 # Patch imports in postprocess.py to use package-relative utils module
 RUN sed -i 's/^from utils /from .utils /' /app/tennis_court_detector/postprocess.py
 

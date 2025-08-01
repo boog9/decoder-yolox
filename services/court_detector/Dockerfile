@@ -30,6 +30,7 @@ RUN mkdir -p /app/tennis_court_detector && \
     cp /tmp/TennisCourtDetector/homography.py /app/tennis_court_detector/ && \
     cp /tmp/TennisCourtDetector/infer_in_image.py /app/tennis_court_detector/ && \
     cat /tmp/infer_patch.py >> /app/tennis_court_detector/infer_in_image.py && \
+    sed -i '1s;^;from __future__ import annotations\n;' /app/tennis_court_detector/infer_in_image.py && \
     sed -i \
         -e 's/^from tracknet /from .tracknet /' \
         -e 's/^from postprocess /from .postprocess /' \

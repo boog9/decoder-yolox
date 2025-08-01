@@ -96,3 +96,13 @@ The output JSON additionally contains `frame_id`, `timestamp_ms`, `model_sha`, a
 `device`, plus a `heatmaps` array with 15 channels. If the optional
 `postprocess.py` utilities are available, a `homography` matrix is also
 included.
+
+### `update-tracknet.sh`
+- **Purpose:** Synchronizes `tracknet.py` with the official TennisCourtDetector repository,
+  rebuilds the `decoder/court-detector` image without cache and performs a smoke test.
+- **GPU required:** Yes for the smoke test. Enable with `--gpus all`.
+
+#### Usage example
+```bash
+./update-tracknet.sh
+```

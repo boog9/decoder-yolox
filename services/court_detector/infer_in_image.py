@@ -60,10 +60,11 @@ class CourtDetector:
             raise RuntimeError("CUDA requested but not available")
 
         self.device = torch.device(device)
-        self.model = BallTrackerNet()
+        # Load network weights directly on the target device
+        self.model = BallTrackerNet().to(self.device)
         state = torch.load(weights_path, map_location=self.device)
         self.model.load_state_dict(state)
-        self.model.to(self.device)
+        # ➜ inference only: disable gradients and ensure eval mode
         self.model.eval()
 
     def detect(self, frame: np.ndarray) -> np.ndarray:

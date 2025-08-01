@@ -65,7 +65,7 @@ docker build -t decoder/court-detector -f services/court_detector/Dockerfile .
 ```
 
 Weights are downloaded automatically during the build phase.
-Model format: PyTorch `.pt` file (validated at build-time).
+Model format: PyTorch `.pt` file (validated at build-time with `map_location="cpu"`).
 The upstream repository is reorganized at build time so that
 `tennis_court_detector` is available as a regular Python package.
 

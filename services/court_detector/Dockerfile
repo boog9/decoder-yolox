@@ -37,7 +37,7 @@ RUN mkdir -p /app/tennis_court_detector && \
 RUN mkdir -p /opt/weights \
     && gdown "$WEIGHTS_URL" -O /opt/weights/model.pt \
     && test -s /opt/weights/model.pt || (echo "Weights download failed" && exit 1) \
-    && python3 -c 'import torch; torch.load("/opt/weights/model.pt")' \
+    && python3 -c 'import torch; torch.load("/opt/weights/model.pt", map_location="cpu")' \
     || (echo "Weights file not usable as PyTorch model." && exit 1)
 
 ENV TCD_WEIGHTS=/opt/weights/model.pt

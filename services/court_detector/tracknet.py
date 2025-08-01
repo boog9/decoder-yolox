@@ -65,7 +65,8 @@ class BallTrackerNet(nn.Module):
         self.conv15 = ConvBlock(512, 512)
         self.conv16 = ConvBlock(512, 512)
         self.conv17 = ConvBlock(512, 512)
-        self.conv18 = ConvBlock(512, 15, kernel_size=1, padding=0)
+        # Останній шар повинен бути 3×3, padding=1 — так, як у офіційних ваг
+        self.conv18 = ConvBlock(512, 15)  # kernel_size=3, padding=1 за замовчуванням
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:  # pragma: no cover
         x = self.conv1(x)

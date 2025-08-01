@@ -64,21 +64,12 @@ make court-detector
 docker build -t decoder/court-detector -f services/court_detector/Dockerfile .
 ```
 
-Weights are downloaded automatically during the build phase.
-Model format: PyTorch `.pt` file (validated at build-time with `map_location="cpu"`).
-The upstream repository is reorganized at build time so that
-`tennis_court_detector` is available as a regular Python package. The Dockerfile
-copies the original `tracknet.py` and overwrites `infer_in_image.py` with a
-patched version from this repository. `calibrate.py` can import `CourtDetector`
-without issues. The wrapper exposes ``detect(frame: np.ndarray)`` which returns
-the model's 15-channel heatmaps as a NumPy array.
-Import statements in `infer_in_image.py` are also patched to use package-
-relative imports (e.g. `from .tracknet import BallTrackerNet`) to avoid
-`ModuleNotFoundError` at runtime.
-`postprocess.py` is similarly patched so that it imports from `.utils`.
-`homography.py` is patched so that it imports from `.court_reference`.
-NumPy is pinned below version 2 for runtime compatibility with PyTorch, and
-matplotlib is installed for utilities in `court_reference.py`.
+Weights are downloaded automatically during the build phase from Google Drive
+and stored in `/opt/weights/model.pt` inside the image. All detector sources are
+packaged under `tennis_court_detector` in the container. Import statements are
+patched for package-relative imports so that `calibrate.py` can simply import
+`CourtDetector`. NumPy is pinned below version 2, and the image includes
+matplotlib and OpenCV for optional homography utilities.
 
 #### Run example
 ```bash
@@ -96,7 +87,7 @@ docker run --rm -v $(pwd)/data:/data decoder/court-detector \
 #### Parameters
 - `--frame` (required) – path to the frame image.
 - `--out` (required) – destination JSON file containing court metadata.
-- `--weights` (optional) – path to the model weights; defaults to `TCD_WEIGHTS`.
+- `--weights` (optional) – path to the model weights; defaults to `/opt/weights/model.pt`.
 - `--device` (optional) – `auto`, `cpu`, or `cuda`; defaults to `auto`.
 
 The output JSON additionally contains `frame_id`, `timestamp_ms`, `model_sha`, and

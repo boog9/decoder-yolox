@@ -22,7 +22,10 @@ from pathlib import Path
 
 import cv2
 import torch
-from tennis_court_detector import CourtDetector
+from tennis_court_detector.infer_in_image import CourtDetector
+
+# Default location of pretrained weights inside the Docker image.
+DEFAULT_WEIGHTS = "/opt/weights/model.pt"
 
 
 def calibrate(frame: str, out: str, weights: str, device: str = "auto") -> dict:
@@ -95,8 +98,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--out", required=True, help="Output JSON path")
     parser.add_argument(
         "--weights",
-        default=os.getenv("TCD_WEIGHTS", ""),
-        help="Path to model weights (default from TCD_WEIGHTS)",
+        default=DEFAULT_WEIGHTS,
+        help=f"Path to model weights (default: {DEFAULT_WEIGHTS})",
     )
     parser.add_argument(
         "--device",

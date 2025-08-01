@@ -21,31 +21,15 @@ RUN git clone --depth 1 https://github.com/boog9/TennisCourtDetector /tmp/Tennis
 
 # TennisCourtDetector repository ships all code in the root directory.
 # Package it under /app/tennis_court_detector so it can be imported.
+COPY services/court_detector/infer_in_image_patch.py /tmp/infer_patch.py
+
 RUN mkdir -p /app/tennis_court_detector && \
     cp /tmp/TennisCourtDetector/tracknet.py /app/tennis_court_detector/ && \
     cp /tmp/TennisCourtDetector/postprocess.py /app/tennis_court_detector/ && \
     cp /tmp/TennisCourtDetector/court_reference.py /app/tennis_court_detector/ && \
     cp /tmp/TennisCourtDetector/homography.py /app/tennis_court_detector/ && \
     cp /tmp/TennisCourtDetector/infer_in_image.py /app/tennis_court_detector/ && \
-    echo '\
-class CourtDetector:\n\
-    def __init__(self, weights_path, device="auto"):\n\
-        from .tracknet import BallTrackerNet\n\
-        import torch\n\
-        self.device = torch.device("cuda" if device=="cuda" and torch.cuda.is_available() else "cpu")\n\
-        self.model = BallTrackerNet()\n\
-        self.model.load_state_dict(torch.load(weights_path, map_location=self.device))\n\
-        self.model.to(self.device)\n\
-        self.model.eval()\n\
-\n\
-    def predict(self, frame_path):\n\
-        from PIL import Image\n\
-        import torchvision.transforms as transforms\n\
-        img = Image.open(frame_path).convert("RGB")\n\
-        tensor = transforms.ToTensor()(img).unsqueeze(0).to(self.device)\n\
-        with torch.no_grad():\n\
-            output = self.model(tensor)\n\
-        return output.cpu().numpy().tolist()\n' >> /app/tennis_court_detector/infer_in_image.py && \
+    cat /tmp/infer_patch.py >> /app/tennis_court_detector/infer_in_image.py && \
     sed -i \
         -e 's/^from tracknet /from .tracknet /' \
         -e 's/^from postprocess /from .postprocess /' \

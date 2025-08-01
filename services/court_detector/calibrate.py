@@ -50,7 +50,7 @@ def calibrate(frame: str, out: str, weights: str, device: str = "auto") -> dict:
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
     try:
-        detector = CourtDetector(weights=weights, device=device)
+        detector = CourtDetector(weights_path=weights, device=device)
     except RuntimeError as e:  # handle cuda-related errors
         if "cuda" in str(e).lower():
             raise RuntimeError("CUDA requested but not available") from e

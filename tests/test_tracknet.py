@@ -24,3 +24,15 @@ def test_state_dict_keys() -> None:
     keys = model.state_dict().keys()
     assert "conv1.block.0.weight" in keys
     assert model.state_dict()["conv18.block.0.weight"].shape[0] == 15
+
+
+def test_state_dict_loading(tmp_path) -> None:
+    """Ensure a saved state dict loads without missing or unexpected keys."""
+    model = BallTrackerNet()
+    path = tmp_path / "weights.pt"
+    torch.save(model.state_dict(), path)
+
+    new_model = BallTrackerNet()
+    result = new_model.load_state_dict(torch.load(path))
+    assert not result.missing_keys
+    assert not result.unexpected_keys

@@ -114,7 +114,8 @@ def main(argv: list[str] | None = None) -> None:
     """CLI entrypoint."""
     args = parse_args(argv)
     meta = calibrate(args.frame, args.out, args.weights, args.device)
-    print(json.dumps(meta))
+    # DEBUG-print disabled — use logger if needed
+    # print(json.dumps(meta, indent=2))
 
 
 if __name__ == "__main__":

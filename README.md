@@ -67,14 +67,11 @@ docker build -t decoder/court-detector -f services/court_detector/Dockerfile .
 Weights are downloaded automatically during the build phase.
 Model format: PyTorch `.pt` file (validated at build-time with `map_location="cpu"`).
 The upstream repository is reorganized at build time so that
-`tennis_court_detector` is available as a regular Python package. After
-copying the upstream sources, the Dockerfile overwrites both `tracknet.py` and
-`infer_in_image.py` with patched versions from this repository. The custom
-`tracknet.py` exposes a 15-channel `BallTrackerNet`, and `calibrate.py` can
-import `CourtDetector` without issues. `__init__.py` simply re-exports this
-class for convenience. The wrapper
-exposes ``detect(frame: np.ndarray)`` which returns the model's 15-channel
-heatmaps as a NumPy array.
+`tennis_court_detector` is available as a regular Python package. The Dockerfile
+copies the original `tracknet.py` and overwrites `infer_in_image.py` with a
+patched version from this repository. `calibrate.py` can import `CourtDetector`
+without issues. The wrapper exposes ``detect(frame: np.ndarray)`` which returns
+the model's 15-channel heatmaps as a NumPy array.
 Import statements in `infer_in_image.py` are also patched to use package-
 relative imports (e.g. `from .tracknet import BallTrackerNet`) to avoid
 `ModuleNotFoundError` at runtime.

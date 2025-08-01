@@ -55,7 +55,7 @@ class BallTrackerNet(nn.Module):
         self.conv5 = ConvBlock(128, 256)
         self.conv6 = ConvBlock(256, 256)
         self.conv7 = ConvBlock(256, 256)
-        # === Official weight channel widths ===
+        # Official weight cfg: 256→512 bottleneck, then narrow back to 64 channels
         self.conv8 = ConvBlock(256, 512)
         self.conv9 = ConvBlock(512, 512)
         self.conv10 = ConvBlock(512, 512)

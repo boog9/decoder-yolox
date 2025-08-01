@@ -11,8 +11,6 @@
 # limitations under the License.
 """Patch for TennisCourtDetector with bbox extraction utilities."""
 
-from __future__ import annotations
-
 from typing import Dict, List
 
 import cv2

@@ -92,10 +92,10 @@ docker run --rm -v $(pwd)/data:/data decoder/court-detector \
 - `--weights` (optional) – path to the model weights; defaults to `/opt/weights/model.pt`.
 - `--device` (optional) – `auto`, `cpu`, or `cuda`; defaults to `auto`.
 
-The output JSON additionally contains `frame_id`, `timestamp_ms`, `model_sha`, and
-`device`, plus a `heatmaps` array with 15 channels. If the optional
-`postprocess.py` utilities are available, a `homography` matrix is also
-included.
+The output JSON includes `frame_id`, `timestamp_ms`, `model_sha`, and `device`.
+If the optional postprocessing utilities are available, refined `court_points`
+and a `homography` matrix are added. Heatmaps are no longer stored in the
+metadata output.
 
 ### `update-tracknet.sh`
 - **Purpose:** Synchronizes `tracknet.py` with the official TennisCourtDetector repository,

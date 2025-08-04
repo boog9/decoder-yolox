@@ -84,9 +84,10 @@ def calibrate(frame: str, out: str, weights: str, device: str = "auto") -> dict:
         except Exception:  # pragma: no cover - homography is optional
             pass
 
+    # write useful metadata as JSON
     Path(out).parent.mkdir(parents=True, exist_ok=True)
     with open(out, "w", encoding="utf-8") as f:
-        json.dump(meta, f)
+        json.dump(meta, f, indent=2)
 
     return meta
 

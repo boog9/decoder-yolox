@@ -39,29 +39,29 @@ def run_upstream_infer(frame_path: str, device: str, tmp_png_out: str) -> None:
     """
     infer_py = os.path.join(REPO_DIR, "infer_in_image.py")
 
-    # Upstream expects --model_path / --input_path / --output_path; no device flag.
-    cmds = [
-        ["python", infer_py,
-         "--model_path", WEIGHTS,
-         "--input_path", frame_path,
-         "--output_path", tmp_png_out,
-         "--use_refine_kps", "--use_homography"],
-        ["python", infer_py,
-         "--model_path", WEIGHTS,
-         "--input_path", frame_path,
-         "--output_path", tmp_png_out],
-        ["python", infer_py,
-         "--input_path", frame_path,
-         "--output_path", tmp_png_out],
+    def _run(cmd: List[str]) -> bool:
+        debug = os.getenv("TCD_DEBUG")
+        res = subprocess.run(
+            cmd, cwd=REPO_DIR, text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        if res.returncode == 0:
+            return True
+        if debug:
+            print(f"[upstream stderr] {' '.join(cmd)}\n{res.stderr}")
+        return False
+
+    # Try minimal first (avoids homography crash), then add model_path, then homography flags.
+    cmds: List[List[str]] = [
+        ["python", infer_py, "--input_path", frame_path, "--output_path", tmp_png_out],
+        ["python", infer_py, "--model_path", WEIGHTS, "--input_path", frame_path, "--output_path", tmp_png_out],
+        ["python", infer_py, "--model_path", WEIGHTS, "--input_path", frame_path, "--output_path", tmp_png_out, "--use_refine_kps", "--use_homography"],
     ]
 
     last_exc: Optional[subprocess.CalledProcessError] = None
     for cmd in cmds:
-        try:
-            subprocess.run(cmd, cwd=REPO_DIR, check=True)
+        if _run(cmd):
             return
-        except subprocess.CalledProcessError as exc:
-            last_exc = exc
 
     # Fallback: import module directly and call known entrypoints.
     import importlib.util
@@ -79,13 +79,8 @@ def run_upstream_infer(frame_path: str, device: str, tmp_png_out: str) -> None:
 
     if hasattr(mod, "infer"):
         try:
-            mod.infer(
-                model_path=WEIGHTS,
-                input_path=frame_path,
-                output_path=tmp_png_out,
-                use_refine_kps=True,
-                use_homography=True,
-            )
+            mod.infer(model_path=WEIGHTS, input_path=frame_path, output_path=tmp_png_out,
+                      use_refine_kps=False, use_homography=False)
             return
         except TypeError:
             mod.infer(model_path=WEIGHTS, input_path=frame_path, output_path=tmp_png_out)
@@ -115,7 +110,7 @@ def main() -> None:
         vis_path = os.path.join(td, "vis.png")
         run_upstream_infer(frame, args.device, vis_path)
 
-    # Not parsing upstream outputs here; return empty structures for now.
+    # We don't parse upstream outputs here; leave as empty to keep the CLI stable.
     keypoints_list: List[List[float]] = []
     homography_mat: Optional[List[List[float]]] = None
 

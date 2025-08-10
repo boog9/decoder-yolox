@@ -20,7 +20,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_PREFER_BINARY=1
-ENV PYTHONPATH="/app/TennisCourtDetector:${PYTHONPATH}"
+ENV PYTHONPATH=/app/TennisCourtDetector
 
 # System deps (git, ffmpeg for video frames if needed)
 RUN apt-get update && apt-get install -y --no-install-recommends \

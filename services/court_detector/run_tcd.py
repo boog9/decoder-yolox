@@ -213,7 +213,7 @@ def main() -> None:
 
         keypoints_list = [[float(x), float(y)] for x, y in np.asarray(kps).tolist()]
 
-        # Homography best-effort (compute_homography or get_trans_matrix)
+        # Homography best-effort (only if safe)
         try:
             hom_path = os.path.join(REPO_DIR, "homography.py")
             mod_h = _load_module(hom_path, "tcd_h") if os.path.exists(hom_path) else None
@@ -223,9 +223,13 @@ def main() -> None:
                 if hasattr(mod_h, "compute_homography"):
                     H = mod_h.compute_homography(pts_np)
                 elif hasattr(mod_h, "get_trans_matrix"):
-                    H = mod_h.get_trans_matrix(pts_np)
-                if H is not None:
-                    homography_mat = [[float(a) for a in row] for row in np.asarray(H).tolist()]
+                    try:
+                        H = mod_h.get_trans_matrix(pts_np)
+                    except Exception:
+                        H = None
+                H = np.asarray(H) if H is not None else None
+                if H is not None and H.ndim == 2 and H.shape == (3, 3):
+                    homography_mat = [[float(a) for a in row] for row in H.tolist()]
         except Exception:
             if os.getenv("TCD_DEBUG"):
                 import traceback

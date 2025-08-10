@@ -33,13 +33,21 @@ ARG TCD_REF=main
 RUN git clone https://github.com/yastrebksv/TennisCourtDetector.git /app/TennisCourtDetector \
     && cd /app/TennisCourtDetector && git checkout ${TCD_REF}
 
-# Python deps: use upstream requirements + non-GUI OpenCV. Avoid legacy pins.
-# PyTorch is already preinstalled in the base image; strip any torch deps first.
-RUN sed -E '/^(torch|torchvision|torchaudio|numpy)([<=>].*)?$/d' -i /app/TennisCourtDetector/requirements.txt \
- && python -m pip install --upgrade pip \
- && pip install "numpy<2,>=1.26" \
- && pip install -r /app/TennisCourtDetector/requirements.txt \
- && pip install "opencv-python-headless>=4.8,<5" "gdown>=5.0.0"
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_PREFER_BINARY=1 \
+    MPLBACKEND=Agg
+RUN python -m pip install --upgrade pip && \
+    pip install \
+      "numpy>=1.26,<2" \
+      "scipy>=1.10,<1.14" \
+      "matplotlib>=3.7,<3.9" \
+      "tqdm>=4.66,<5" \
+      "sympy>=1.12,<1.13" \
+      "Pillow>=10,<11" \
+      "opencv-python-headless>=4.8,<5" \
+      "gdown>=5" || \
+    (pip install "torchvision==0.19.*"; exit 0)
 
 # Download upstream pretrained weights to expected path in repo root (per README).
 # README points to Google Drive; using gdown by file id is stable.

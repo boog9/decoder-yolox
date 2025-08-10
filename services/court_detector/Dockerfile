@@ -25,11 +25,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Clone upstream TennisCourtDetector at a fixed commit for reproducibility
-ARG TCD_COMMIT=3e0743cd5a3ad0a09345d9ae9953ccb209c82e91
+# Clone upstream TennisCourtDetector at a configurable ref (default: main)
+ARG TCD_REF=main
 RUN git clone https://github.com/yastrebksv/TennisCourtDetector.git /app/TennisCourtDetector \
     && cd /app/TennisCourtDetector \
-    && git checkout ${TCD_COMMIT}
+    && git checkout ${TCD_REF} \
+    && test -f infer_in_image.py
 
 # Python deps: use upstream requirements + non-GUI OpenCV. Avoid legacy pins.
 # PyTorch is already preinstalled in the base image; strip any torch deps first.

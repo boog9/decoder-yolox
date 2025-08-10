@@ -75,7 +75,7 @@ To build from a different upstream reference, replace `<branch_or_commit>` with 
 docker run --rm --gpus all \
   -v $PWD/data:/data \
   decoder/court-detector \
-  --frame /data/frames/000001.png \
+  --frame /data/frames_min/000000.png \
   --out   /data/court_meta.json \
   --device cuda
 ```
@@ -104,7 +104,7 @@ docker run --rm --gpus all \
   -v $PWD/data:/data \
   -v $PWD/weights/model.pt:/app/TennisCourtDetector/model.pt:ro \
   decoder/court-detector \
-  --frame /data/frames/000001.png \
+  --frame /data/frames_min/000000.png \
   --out   /data/court_meta.json \
   --device cuda
 ```
@@ -117,7 +117,7 @@ make court-detector
 
 # 2) Run inference on GPU
 docker run --rm --gpus all -v $PWD/data:/data decoder/court-detector \
-  --frame /data/frames/000001.png \
+  --frame /data/frames_min/000000.png \
   --out   /data/court_meta.json \
   --device cuda
 

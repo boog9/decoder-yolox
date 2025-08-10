@@ -1,6 +1,6 @@
 # decoder-yolox
 
-This repository contains Docker build files for the video-processing pipeline described in the project documentation. The images target Ubuntu 22.04 with NVIDIA GPUs and Python 3.10.
+This repository contains Docker build files for the video-processing pipeline described in the project documentation. The images target Ubuntu 22.04 with NVIDIA GPUs and Python 3.10+. The court-detector service is built on Python 3.11.
 
 ## Docker Images
 
@@ -65,7 +65,9 @@ PyTorch Docker tags for 2.4.1 CUDA 12.1 are available.
 ### Build
 ```bash
 make court-detector
+docker build --build-arg TCD_REF=<branch_or_commit> -t decoder/court-detector services/court_detector
 ```
+To build from a different upstream reference, replace `<branch_or_commit>` with the desired branch, tag, or commit hash.
 
 ### Run (single frame)
 

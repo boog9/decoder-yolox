@@ -16,7 +16,10 @@ FROM pytorch/pytorch:2.4.1-cuda12.1-cudnn9-runtime
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_PREFER_BINARY=1
 
 # System deps (git, ffmpeg for video frames if needed)
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -25,18 +28,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Clone upstream TennisCourtDetector at a configurable ref (default: main)
+# Clone upstream TennisCourtDetector (ref can be branch, tag, or commit)
 ARG TCD_REF=main
 RUN git clone https://github.com/yastrebksv/TennisCourtDetector.git /app/TennisCourtDetector \
-    && cd /app/TennisCourtDetector \
-    && git checkout ${TCD_REF} \
-    && test -f infer_in_image.py
+    && cd /app/TennisCourtDetector && git checkout ${TCD_REF}
 
 # Python deps: use upstream requirements + non-GUI OpenCV. Avoid legacy pins.
 # PyTorch is already preinstalled in the base image; strip any torch deps first.
-RUN sed -E '/^(torch|torchvision|torchaudio)([<=>].*)?$/d' -i /app/TennisCourtDetector/requirements.txt \
- && pip install --no-cache-dir -r /app/TennisCourtDetector/requirements.txt \
- && pip install --no-cache-dir opencv-python-headless>=4.8,<5 gdown>=5.0.0
+RUN sed -E '/^(torch|torchvision|torchaudio|numpy)([<=>].*)?$/d' -i /app/TennisCourtDetector/requirements.txt \
+ && python -m pip install --upgrade pip \
+ && pip install "numpy<2,>=1.26" \
+ && pip install -r /app/TennisCourtDetector/requirements.txt \
+ && pip install "opencv-python-headless>=4.8,<5" "gdown>=5.0.0"
 
 # Download upstream pretrained weights to expected path in repo root (per README).
 # README points to Google Drive; using gdown by file id is stable.

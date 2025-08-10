@@ -10,7 +10,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Thin CLI wrapper around upstream TennisCourtDetector."""
+"""Thin CLI wrapper around upstream TennisCourtDetector that returns keypoints.
+Runs the upstream `tracknet` model directly, computes heatmap argmax keypoints,
+optionally refines them and estimates homography if upstream helpers exist.
+"""
 
 from __future__ import annotations
 
@@ -27,8 +30,21 @@ REPO_DIR = "/app/TennisCourtDetector"
 WEIGHTS = os.path.join(REPO_DIR, "model.pt")
 
 
+def _load_module(path: str, name: str):
+    """Load a python module from file path safely; return None on failure."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(name, path)
+    if not spec or not spec.loader:
+        return None
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
+    spec.loader.exec_module(mod)  # type: ignore[attr-defined]
+    return mod
+
+
 def run_upstream_infer(frame_path: str, device: str, tmp_png_out: str) -> None:
-    """Invoke upstream inference script with fallback strategies.
+    """Optional: call upstream script for its visualization (best-effort only).
 
     Args:
         frame_path: Path to input image.
@@ -95,19 +111,10 @@ def run_upstream_infer(frame_path: str, device: str, tmp_png_out: str) -> None:
             return
 
     # Fallback: import module directly and call known entrypoints.
-    import importlib.util
-
     if REPO_DIR not in sys.path:
         sys.path.insert(0, REPO_DIR)
-
-    spec = importlib.util.spec_from_file_location("tcd_infer", infer_py)
-    if spec is None or spec.loader is None:
-        return
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules["tcd_infer"] = mod
-    spec.loader.exec_module(mod)  # type: ignore[assignment]
-
-    if hasattr(mod, "infer"):
+    mod = _load_module(infer_py, "tcd_infer")
+    if mod and hasattr(mod, "infer"):
         try:
             mod.infer(
                 model_path=WEIGHTS,
@@ -150,37 +157,50 @@ def main() -> None:
 
                 traceback.print_exc()
 
-    # Local inference → stable keypoints (and optional homography)
+    # === Local inference → stable keypoints (and optional homography) ===
     keypoints_list: List[List[float]] = []
     homography_mat: Optional[List[List[float]]] = None
     try:
         import cv2  # type: ignore
         import numpy as np
         import torch
-        from tracknet import BallTrackerNet  # type: ignore
+
+        if REPO_DIR not in sys.path:
+            sys.path.insert(0, REPO_DIR)
+        from tracknet import BallTrackerNet, ConvBlock  # type: ignore
 
         dev = "cuda" if (args.device == "cuda" and torch.cuda.is_available()) else "cpu"
         img = cv2.imread(frame, cv2.IMREAD_COLOR)
         if img is None:
             raise FileNotFoundError(f"Cannot read image: {frame}")
 
-        x = (
-            torch.from_numpy(img[:, :, ::-1].transpose(2, 0, 1)).float().unsqueeze(0) / 255.0
-        ).to(dev)
+        # BGR -> RGB, CHW, contiguous to avoid negative strides
+        rgb_chw = np.ascontiguousarray(img[:, :, ::-1].transpose(2, 0, 1))
+        x = torch.from_numpy(rgb_chw).float().unsqueeze(0) / 255.0
+        x = x.to(dev)
 
         model = BallTrackerNet().to(dev).eval()
+        # Fix last conv out_channels to 15 if needed (many checkpoints are 15-channel)
+        try:
+            oc = getattr(getattr(model, "conv18").block[0], "out_channels", None)
+            if oc != 15:
+                model.conv18 = ConvBlock(64, 15)  # type: ignore[attr-defined]
+        except Exception:
+            pass
         state = torch.load(WEIGHTS, map_location=dev)
         model.load_state_dict(state, strict=False)
         with torch.no_grad():
             heat = model(x).squeeze(0).detach().cpu().numpy()
 
+        # Prefer upstream postprocess.refine_kps if available
         kps = None
-        try:
-            from postprocess import refine_kps  # type: ignore
-
-            kps = refine_kps(heat)
-        except Exception:
-            kps = None
+        post_path = os.path.join(REPO_DIR, "postprocess.py")
+        mod_pp = _load_module(post_path, "tcd_post") if os.path.exists(post_path) else None
+        if mod_pp and hasattr(mod_pp, "refine_kps"):
+            try:
+                kps = mod_pp.refine_kps(heat)
+            except Exception:
+                kps = None
 
         if kps is None:
             c, h, w = heat.shape
@@ -193,16 +213,11 @@ def main() -> None:
 
         keypoints_list = [[float(x), float(y)] for x, y in np.asarray(kps).tolist()]
 
-        # Homography best-effort
+        # Homography best-effort (compute_homography or get_trans_matrix)
         try:
-            import importlib.util
-
-            spec_h = importlib.util.spec_from_file_location(
-                "tcd_h", os.path.join(REPO_DIR, "homography.py")
-            )
-            if spec_h and spec_h.loader and len(keypoints_list) >= 4:
-                mod_h = importlib.util.module_from_spec(spec_h)
-                spec_h.loader.exec_module(mod_h)  # type: ignore
+            hom_path = os.path.join(REPO_DIR, "homography.py")
+            mod_h = _load_module(hom_path, "tcd_h") if os.path.exists(hom_path) else None
+            if mod_h and len(keypoints_list) >= 4:
                 pts_np = np.asarray(keypoints_list, dtype=np.float32)
                 H = None
                 if hasattr(mod_h, "compute_homography"):
@@ -210,9 +225,7 @@ def main() -> None:
                 elif hasattr(mod_h, "get_trans_matrix"):
                     H = mod_h.get_trans_matrix(pts_np)
                 if H is not None:
-                    homography_mat = [
-                        [float(a) for a in row] for row in np.asarray(H).tolist()
-                    ]
+                    homography_mat = [[float(a) for a in row] for row in np.asarray(H).tolist()]
         except Exception:
             if os.getenv("TCD_DEBUG"):
                 import traceback
@@ -239,4 +252,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

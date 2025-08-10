@@ -110,9 +110,124 @@ def main() -> None:
         vis_path = os.path.join(td, "vis.png")
         run_upstream_infer(frame, args.device, vis_path)
 
-    # We don't parse upstream outputs here; leave as empty to keep the CLI stable.
+    # Try to populate keypoints (and optional homography) directly via upstream modules.
     keypoints_list: List[List[float]] = []
     homography_mat: Optional[List[List[float]]] = None
+
+    try:
+        import importlib.util
+        import numpy as np
+        import cv2
+        import torch
+        import traceback
+
+        # Ensure upstream is importable.
+        if REPO_DIR not in sys.path:
+            sys.path.insert(0, REPO_DIR)
+        infer_path = os.path.join(REPO_DIR, "infer_in_image.py")
+        spec_i = importlib.util.spec_from_file_location("tcd_infer", infer_path)
+        if spec_i and spec_i.loader:
+            mod_i = importlib.util.module_from_spec(spec_i)
+            spec_i.loader.exec_module(mod_i)  # type: ignore[attr-defined]
+
+            # Load image.
+            img = cv2.imread(frame, cv2.IMREAD_COLOR)
+            if img is None:
+                raise FileNotFoundError(f"Cannot read image: {frame}")
+
+            dev = (
+                "cuda"
+                if (args.device == "cuda" and torch.cuda.is_available())
+                else "cpu"
+            )
+
+            # Build detector robustly across API variants.
+            Detector = getattr(mod_i, "CourtDetector", None)
+            if Detector is None:
+                raise RuntimeError("Upstream module has no CourtDetector")
+            det = None
+            for ctor in (
+                lambda: Detector(model_path=WEIGHTS, device=dev),
+                lambda: Detector(WEIGHTS, dev),
+                lambda: Detector(WEIGHTS),
+            ):
+                try:
+                    det = ctor()
+                    break
+                except TypeError:
+                    continue
+            if det is None:
+                det = Detector(WEIGHTS)
+
+            out = det.detect(img)
+
+            # Prefer upstream postprocess if available.
+            kps = None
+            try:
+                spec_pp = importlib.util.spec_from_file_location(
+                    "tcd_post", os.path.join(REPO_DIR, "postprocess.py")
+                )
+                if spec_pp and spec_pp.loader:
+                    mod_pp = importlib.util.module_from_spec(spec_pp)
+                    spec_pp.loader.exec_module(mod_pp)  # type: ignore[attr-defined]
+                    if hasattr(mod_pp, "refine_kps"):
+                        heatmaps = out if isinstance(out, np.ndarray) else None
+                        if isinstance(heatmaps, np.ndarray) and heatmaps.ndim == 3:
+                            kps = mod_pp.refine_kps(heatmaps)
+            except Exception:
+                if os.getenv("TCD_DEBUG"):
+                    traceback.print_exc()
+
+            # If no upstream refinement, derive kps by argmax per channel.
+            if kps is None:
+                if isinstance(out, np.ndarray):
+                    if out.ndim == 3:
+                        c, h, w = out.shape
+                        kps = []
+                        for ch in range(c):
+                            idx = int(np.argmax(out[ch]))
+                            y, x = divmod(idx, w)
+                            kps.append([float(x), float(y)])
+                        kps = np.asarray(kps, dtype=np.float32)
+                    elif out.ndim == 2 and out.shape[1] == 2:
+                        kps = out.astype(np.float32)
+                elif (
+                    isinstance(out, (list, tuple))
+                    and len(out) > 0
+                    and len(out[0]) == 2
+                ):
+                    kps = np.asarray(out, dtype=np.float32)
+
+            if kps is not None:
+                keypoints_list = [
+                    [float(x), float(y)] for x, y in np.asarray(kps).tolist()
+                ]
+
+            # Homography (best-effort, optional).
+            try:
+                spec_h = importlib.util.spec_from_file_location(
+                    "tcd_h", os.path.join(REPO_DIR, "homography.py")
+                )
+                if spec_h and spec_h.loader and len(keypoints_list) >= 4:
+                    mod_h = importlib.util.module_from_spec(spec_h)
+                    spec_h.loader.exec_module(mod_h)  # type: ignore[attr-defined]
+                    if hasattr(mod_h, "compute_homography"):
+                        h_mat = mod_h.compute_homography(
+                            np.asarray(keypoints_list, dtype=np.float32)
+                        )
+                        if h_mat is not None:
+                            homography_mat = [
+                                [float(a) for a in row]
+                                for row in np.asarray(h_mat).tolist()
+                            ]
+            except Exception:
+                if os.getenv("TCD_DEBUG"):
+                    traceback.print_exc()
+    except Exception:
+        if os.getenv("TCD_DEBUG"):
+            import traceback
+
+            traceback.print_exc()
 
     result = {
         "source_frame": args.frame,

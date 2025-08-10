@@ -53,56 +53,73 @@ docker run --rm -v $(pwd)/data:/data decoder/extractor \
 - `--out` (required) – directory where frames will be saved.
 - `--fps` (default: `30`) – output frame rate.
 
-### `decoder/court-detector`
-- **Purpose:** Detects tennis court lines on a frame and writes calibration metadata.
-- **GPU required:** Yes. Use `--gpus all` when running; the tool falls back to CPU if unavailable.
+## Court Detector (TennisCourtDetector)
 
-#### Build example
+This service packages the upstream [TennisCourtDetector](https://github.com/yastrebksv/TennisCourtDetector) with original pretrained weights and a thin CLI wrapper.  
+Base image uses modern **PyTorch 2.4.1 + CUDA 12.1 + cuDNN 9** (no legacy CUDA images).  
+Upstream README describes 14 keypoints (+1 center) and provides Google Drive weights.  
+PyTorch Docker tags for 2.4.1 CUDA 12.1 are available.
+
+- **GPU required:** Yes. Enable with `--gpus all`. The CLI can run on CPU via `--device cpu`.
+
+### Build
 ```bash
 make court-detector
-# or
-docker build -t decoder/court-detector -f services/court_detector/Dockerfile .
 ```
 
-Weights are downloaded automatically during the build phase from Google Drive
-and stored in `/opt/weights/model.pt` inside the image. All detector sources are
-packaged under `tennis_court_detector` in the container. Import statements are
-patched for package-relative imports so that `calibrate.py` can simply import
-`CourtDetector`. NumPy is pinned below version 2, and the image includes
-matplotlib and OpenCV for optional homography utilities. The exact weights are
-retrieved from Google Drive file ID `1f-Co64ehgq4uddcQm1aFBDtbnyZhQvgG` to
-ensure reproducibility.
+### Run (single frame)
 
-#### Run example
 ```bash
-docker run --gpus all --rm -v $(pwd)/data:/data decoder/court-detector \
-    --frame /data/frames/000000.png --out /data/court_meta.json
-```
-```bash
-docker run --rm -v $(pwd)/data:/data decoder/court-detector \
-    --frame /data/frames/000000.png --out /data/court_meta.json --device cpu
+docker run --rm --gpus all \
+  -v $PWD/data:/data \
+  decoder/court-detector \
+  --frame /data/frames/000001.png \
+  --out   /data/court_meta.json \
+  --device cuda
 ```
 
 #### Dependencies / volumes
-- Mount a working directory with `-v $(pwd)/data:/data` for input and output files.
+- Mount a working directory with `-v $PWD/data:/data` for input and output files.
 
 #### Parameters
-- `--frame` (required) – path to the frame image.
+- `--frame` (required) – path to the input frame image.
 - `--out` (required) – destination JSON file containing court metadata.
-- `--weights` (optional) – path to the model weights; defaults to `/opt/weights/model.pt`.
-- `--device` (optional) – `auto`, `cpu`, or `cuda`; defaults to `auto`.
+- `--device` (default: `cuda`) – inference device, `cuda` or `cpu`.
 
-The output JSON includes `frame_id`, `timestamp_ms`, `model_sha`, and `device`.
-If the optional postprocessing utilities are available, refined `court_points`
-and a `homography` matrix are added. Heatmaps are no longer stored in the
-metadata output.
+* `court_meta.json` contains keypoints and homography when upstream modules are available.
+* If modules are missing, the file still records that inference completed and which device and weights were used.
 
-### `update-tracknet.sh`
-- **Purpose:** Synchronizes `tracknet.py` with the official TennisCourtDetector repository,
-  rebuilds the `decoder/court-detector` image without cache and performs a smoke test.
-- **GPU required:** Yes for the smoke test. Enable with `--gpus all`.
+#### Weights
+The build step downloads pretrained weights from Google Drive. If `gdown` hits rate limits (HTTP 403/429), download the file manually and mount it at runtime:
 
-#### Usage example
 ```bash
-./update-tracknet.sh
+# Download once on the host
+gdown --fuzzy "https://drive.google.com/uc?id=1f-Co64ehgq4uddcQm1aFBDtbnyZhQvgG" \
+  -O weights/model.pt
+
+# Run container with mounted weights
+docker run --rm --gpus all \
+  -v $PWD/data:/data \
+  -v $PWD/weights/model.pt:/app/TennisCourtDetector/model.pt:ro \
+  decoder/court-detector \
+  --frame /data/frames/000001.png \
+  --out   /data/court_meta.json \
+  --device cuda
 ```
+
+
+### Smoke-test
+```bash
+# 1) Build image
+make court-detector
+
+# 2) Run inference on GPU
+docker run --rm --gpus all -v $PWD/data:/data decoder/court-detector \
+  --frame /data/frames/000001.png \
+  --out   /data/court_meta.json \
+  --device cuda
+
+# 3) Inspect JSON output
+jq . /data/court_meta.json
+```
+If the JSON contains approximately 14–15 keypoints and a `homography` matrix, the upstream detector is fully utilized.

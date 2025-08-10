@@ -160,6 +160,7 @@ def main() -> None:
     # === Local inference → stable keypoints (and optional homography) ===
     keypoints_list: List[List[float]] = []
     homography_mat: Optional[List[List[float]]] = None
+    result_note_fallback = False
     try:
         import cv2  # type: ignore
         import numpy as np
@@ -179,18 +180,36 @@ def main() -> None:
         x = torch.from_numpy(rgb_chw).float().unsqueeze(0) / 255.0
         x = x.to(dev)
 
-        model = BallTrackerNet().to(dev).eval()
-        # Fix last conv out_channels to 15 if needed (many checkpoints are 15-channel)
+        # Build model on CPU first, maybe replace conv18, then move to device
+        model = BallTrackerNet().eval()
         try:
             oc = getattr(getattr(model, "conv18").block[0], "out_channels", None)
             if oc != 15:
                 model.conv18 = ConvBlock(64, 15)  # type: ignore[attr-defined]
         except Exception:
             pass
+        model = model.to(dev)
         state = torch.load(WEIGHTS, map_location=dev)
         model.load_state_dict(state, strict=False)
-        with torch.no_grad():
-            heat = model(x).squeeze(0).detach().cpu().numpy()
+        try:
+            with torch.no_grad():
+                heat = model(x).squeeze(0).detach().cpu().numpy()
+        except Exception:
+            if os.getenv("TCD_DEBUG"):
+                import traceback
+
+                traceback.print_exc()
+            if dev == "cuda":
+                dev = "cpu"
+                x = x.to(dev)
+                model = model.to(dev)
+                state = torch.load(WEIGHTS, map_location="cpu")
+                model.load_state_dict(state, strict=False)
+                with torch.no_grad():
+                    heat = model(x).squeeze(0).detach().cpu().numpy()
+                result_note_fallback = True
+            else:
+                raise
 
         # Prefer upstream postprocess.refine_kps if available
         kps = None
@@ -241,11 +260,16 @@ def main() -> None:
 
             traceback.print_exc()
 
+    note = (
+        "Inference OK. keypoints/homography populated when upstream modules are present."
+    )
+    if result_note_fallback:
+        note += " (fallback to cpu)"
     result = {
         "source_frame": args.frame,
         "weights_path": WEIGHTS,
         "device": args.device,
-        "notes": "Inference OK. keypoints/homography populated when upstream modules are present.",
+        "notes": note,
         "keypoints": keypoints_list,
         "homography": homography_mat,
     }

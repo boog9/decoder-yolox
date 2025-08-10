@@ -80,6 +80,17 @@ docker run --rm --gpus all \
   --device cuda
 ```
 
+#### Host paths (relative)
+If you prefer to use host-relative paths (e.g., `data/frames_min/000000.png`), mirror your working directory inside the container:
+```bash
+docker run --rm --gpus all \
+  -v "$PWD:$PWD" -w "$PWD" \
+  decoder/court-detector \
+  --frame data/frames_min/000000.png \
+  --out   data/court_meta.json \
+  --device cuda
+```
+
 #### Dependencies / volumes
 - Mount a working directory with `-v $PWD/data:/data` for input and output files.
 

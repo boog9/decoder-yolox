@@ -22,6 +22,5 @@ extractor:
 
 
 .PHONY: court-detector
-
 court-detector:
-	docker build -t decoder/court-detector -f services/court_detector/Dockerfile .
+	docker build -t decoder/court-detector services/court_detector

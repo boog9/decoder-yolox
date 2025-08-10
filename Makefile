@@ -10,6 +10,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+TCD_REF ?= main
+
 .PHONY: base-cuda
 
 base-cuda:
@@ -23,4 +25,4 @@ extractor:
 
 .PHONY: court-detector
 court-detector:
-	docker build -t decoder/court-detector services/court_detector
+	docker build --build-arg TCD_REF=$(TCD_REF) -t decoder/court-detector services/court_detector
